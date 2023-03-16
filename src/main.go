@@ -1,54 +1,111 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/thinkerou/favicon"
 	"net/http"
 )
 
+type member struct {
+	Id         int
+	Username   string
+	Password   string
+	Created_at string
+	Updated_at string
+	Deleted_at sql.NullString
+}
+
+var db *sql.DB
+
+func initDB() (err error) {
+	db, err = sql.Open("mysql", "root:123456@tcp(127.0.0.1)/upm")
+	if err != nil {
+		fmt.Printf("db open err : %s\n", err)
+		return err
+	}
+
+	err = db.Ping()
+	if err != nil {
+		fmt.Printf("db ping err : %s\n", err)
+		return err
+	}
+
+	return nil
+}
+
+func findone(username string) member {
+	var m member
+	err := db.QueryRow("select id, username,password,created_at,updated_at,deleted_at from members where username = ?", username).Scan(&m.Id, &m.Username, &m.Password, &m.Created_at, &m.Updated_at, &m.Deleted_at)
+	if err != nil {
+		fmt.Printf("findone data failed err :%s\n", err)
+	}
+
+	fmt.Printf("findone member info %v\n", m)
+	return m
+}
+
 func main() {
+	var m member
+	err := initDB()
+	if err != nil {
+		fmt.Printf("connection mysql db failed:%s", err)
+		return
+	}
+	fmt.Println("connection mysql db success")
+	defer db.Close()
+
 	r := gin.Default()
+	r.Use(favicon.New("src/R-C.jpg"))
 
 	//Gin框架中使用LoadHTMLGlob()或者LoadHTMLFiles()方法进行HTML模板渲染。
 	r.LoadHTMLGlob("src/*/**/*")
 	//r.LoadHTMLFiles("src/templates/posts/index.html", "src/templates/users/index.html")
-	r.GET("/posts/index", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "posts/index.html", gin.H{
-			"title": "posts/index",
-		})
-	})
-
-	r.GET("users/index", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "users/index.html", gin.H{
-			"title": "users/index",
-		})
-	})
-
-	r.GET("users/login", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "users/login.html", gin.H{
-			"title": "users/index",
-		})
-	})
-
-	r.POST("/form", func(c *gin.Context) {
-		types := c.DefaultPostForm("type", "post")
-		username := c.PostForm("username")
-		pwd := c.PostForm("password")
-
-		c.String(http.StatusOK, fmt.Sprintf("username:%s , password:%s , types:%s", username, pwd, types))
-
-	})
-
-	//r.SetFuncMap(template.FuncMap{
-	//	"safe" : func (str string)template.HTML{
-	//		return template.HTML(str)
-	//	},
+	//r.GET("/posts/index", func(c *gin.Context) {
+	//	c.HTML(http.StatusOK, "posts/index.html", gin.H{
+	//		"title": "posts/index",
+	//	})
 	//})
-	////r.LoadHTMLGlob("src/*")
-	//r.GET("/index", func(c *gin.Context) {
-	//	c.HTML(http.StatusOK, "index.html", "<a href='https://baidu.com'>baidu</a>")
+	//
+	//r.GET("users/index", func(c *gin.Context) {
+	//	c.HTML(http.StatusOK, "users/index.html", gin.H{
+	//		"title": "users/index",
+	//	})
 	//})
 
+	//路由组 member
+	memberGroup := r.Group("/member")
+	{
+		memberGroup.GET("/login", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "users/login.html", gin.H{
+				"tittle": "用户名/密码",
+			})
+		})
+
+		memberGroup.POST("/form", func(c *gin.Context) {
+			//types := c.DefaultPostForm("type", "post")
+			username := c.PostForm("username")
+			pwd := c.PostForm("password")
+			m = findone(username)
+			if m.Password == pwd {
+				//c.String(http.StatusOK, fmt.Sprintf("id:%d, username:%s, password:%s, created_at:%s, updated_at:%s, deleted_at:%t, types:%s", m.Id, m.Username, m.Password, m.Created_at, m.Updated_at, m.Deleted_at.Valid, types))
+				c.HTML(http.StatusOK, "users/index.html", gin.H{
+					"m_id":         m.Id,
+					"m_username":   m.Username,
+					"m_pwd":        m.Password,
+					"m_created_at": m.Created_at,
+					"m_updated_at": m.Updated_at,
+					"m_deleted_at": m.Deleted_at.Valid,
+				})
+			} else {
+				c.HTML(http.StatusOK, "users/no_found.html", gin.H{
+					"msg": "未找到该用户，请注册",
+				})
+			}
+		})
+	}
 
 	r.Run(":8080")
 }
