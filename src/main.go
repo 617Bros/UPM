@@ -1,97 +1,31 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/thinkerou/favicon"
 	"net/http"
-	"time"
 )
 
-type member struct {
-	Id         int
-	Username   string
-	Password   string
-	Created_at string
-	Updated_at string
-	Deleted_at sql.NullString
-}
-
-var db *sql.DB
-
-func initDB() (err error) {
-	db, err = sql.Open("mysql", "root:123456@tcp(127.0.0.1)/upm")
-	if err != nil {
-		fmt.Printf("db open err : %s\n", err)
-		return err
-	}
-
-	err = db.Ping()
-	if err != nil {
-		fmt.Printf("db ping err : %s\n", err)
-		return err
-	}
-
-	return nil
-}
-
-func findone(username string) member {
-	var m member
-	err := db.QueryRow("select id, username,password,created_at,updated_at,deleted_at from members where username = ?", username).Scan(&m.Id, &m.Username, &m.Password, &m.Created_at, &m.Updated_at, &m.Deleted_at)
-	if err != nil {
-		fmt.Printf("findone data failed err :%s\n", err)
-	}
-
-	fmt.Printf("findone member info %v\n", m)
-	return m
-}
-
-// 插入一条数据
-func insertData(username string, password string) (err error) {
-	// 增、改、删 使用Exec方法
-	exec, err := db.Exec("insert into members(username,password,created_at,updated_at,deleted_at) values (?,?,?,?,?)", username, password, time.Now(), time.Now(), nil)
-	if err != nil {
-		fmt.Printf("exec insert failed err:%s\n", err)
-		return err
-	}
-	id, err := exec.LastInsertId() // 往表中最后追加一条数据
-	if err != nil {
-		fmt.Printf("exec insert failed err:%s\n", err)
-		return err
-	}
-	fmt.Printf("insert data id is : %d\n", id)
-	return nil
-}
-
 func main() {
-	var m member
+	var m Member
+	//连接数据库
 	err := initDB()
 	if err != nil {
 		fmt.Printf("connection mysql db failed:%s", err)
-		return
 	}
 	fmt.Println("connection mysql db success")
+	//main函数结束后数据库连接关闭
 	defer db.Close()
 
+	//启用一个默认的gin
 	r := gin.Default()
+	//小图标
 	r.Use(favicon.New("src/R-C.jpg"))
-
 	//Gin框架中使用LoadHTMLGlob()或者LoadHTMLFiles()方法进行HTML模板渲染。
 	r.LoadHTMLGlob("src/*/**/*")
 	//r.LoadHTMLFiles("src/templates/posts/index.html", "src/templates/users/index.html")
-	//r.GET("/posts/index", func(c *gin.Context) {
-	//	c.HTML(http.StatusOK, "posts/index.html", gin.H{
-	//		"title": "posts/index",
-	//	})
-	//})
-	//
-	//r.GET("users/index", func(c *gin.Context) {
-	//	c.HTML(http.StatusOK, "users/index.html", gin.H{
-	//		"title": "users/index",
-	//	})
-	//})
 
 	//路由组 member
 	memberGroup := r.Group("/member")
