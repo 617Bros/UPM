@@ -1,4 +1,4 @@
-package main
+package dbconn
 
 import (
 	"database/sql"
@@ -17,7 +17,7 @@ type Member struct {
 
 var db *sql.DB
 
-func initDB() (err error) {
+func InitDB() (err error) {
 	db, err = sql.Open("mysql", "root:123456@tcp(127.0.0.1)/upm")
 	if err != nil {
 		fmt.Printf("db open err : %s\n", err)
@@ -33,7 +33,7 @@ func initDB() (err error) {
 	return nil
 }
 
-func findone(username string) Member {
+func Findone(username string) Member {
 	var m Member
 	err := db.QueryRow("select id, username,password,created_at,updated_at,deleted_at from members where username = ?", username).Scan(&m.Id, &m.Username, &m.Password, &m.Created_at, &m.Updated_at, &m.Deleted_at)
 	if err != nil {
@@ -45,7 +45,7 @@ func findone(username string) Member {
 }
 
 // 查询多条数据
-func findsData() []Member {
+func FindsData() []Member {
 	var s []Member
 	rows, err := db.Query("select id,username,password,created_at,updated_at,deleted_at from `members`")
 	if err != nil {
@@ -68,7 +68,7 @@ func findsData() []Member {
 }
 
 // 插入一条数据
-func insertData(username string, password string) (err error) {
+func InsertData(username string, password string) (err error) {
 	// 增、改、删 使用Exec方法
 	exec, err := db.Exec("insert into members(username,password,created_at,updated_at,deleted_at) values (?,?,?,?,?)", username, password, time.Now(), time.Now(), nil)
 	if err != nil {
@@ -85,7 +85,7 @@ func insertData(username string, password string) (err error) {
 }
 
 // 更新数据
-func updateData(id int, username, password string) {
+func UpdateData(id int, username, password string) {
 	ret, err := db.Exec("update members set username = ?,password = ? where id = ?", username, password, id)
 	if err != nil {
 		fmt.Printf("update failed err:%s\n", err)
@@ -98,7 +98,7 @@ func updateData(id int, username, password string) {
 }
 
 // 删除数据
-func delData(id int) {
+func DelData(id int) {
 	ret, err := db.Exec("delete from members where id = ?", id)
 	if err != nil {
 		fmt.Printf("del failed err:%s\n", err)
@@ -110,4 +110,8 @@ func delData(id int) {
 		return
 	}
 	fmt.Printf("update success rows:%d\n", affected)
+}
+
+func Close() {
+	defer db.Close()
 }
