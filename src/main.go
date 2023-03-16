@@ -7,6 +7,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/thinkerou/favicon"
 	"net/http"
+	"time"
 )
 
 type member struct {
@@ -45,6 +46,23 @@ func findone(username string) member {
 
 	fmt.Printf("findone member info %v\n", m)
 	return m
+}
+
+// 插入一条数据
+func insertData(username string, password string) (err error) {
+	// 增、改、删 使用Exec方法
+	exec, err := db.Exec("insert into members(username,password,created_at,updated_at,deleted_at) values (?,?,?,?,?)", username, password, time.Now(), time.Now(), nil)
+	if err != nil {
+		fmt.Printf("exec insert failed err:%s\n", err)
+		return err
+	}
+	id, err := exec.LastInsertId() // 往表中最后追加一条数据
+	if err != nil {
+		fmt.Printf("exec insert failed err:%s\n", err)
+		return err
+	}
+	fmt.Printf("insert data id is : %d\n", id)
+	return nil
 }
 
 func main() {
@@ -104,6 +122,20 @@ func main() {
 					"msg": "未找到该用户，请注册",
 				})
 			}
+		})
+
+		memberGroup.POST("/zhuceform", func(c *gin.Context) {
+			username := c.PostForm("username")
+			pwd := c.PostForm("password")
+			err := insertData(username, pwd)
+			if err != nil {
+				fmt.Printf("exec insert failed err:%s\n", err)
+			} else {
+				c.HTML(http.StatusOK, "users/login.html", gin.H{
+					"zhuce": "注册成功请登录",
+				})
+			}
+
 		})
 	}
 
