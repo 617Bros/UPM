@@ -32,9 +32,7 @@ func main() {
 	memberGroup := r.Group("/member")
 	{
 		memberGroup.GET("/login", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "users/login.html", gin.H{
-				"tittle": "用户名/密码",
-			})
+			c.HTML(http.StatusOK, "users/login.html", nil)
 		})
 
 		memberGroup.POST("/form", func(c *gin.Context) {
